@@ -6,8 +6,8 @@
  * which sidesteps the CLI's own shell:true argument-splitting bug on Windows
  * (dsh-handbook ch.3, discussion #1420).
  */
-import { existsSync } from 'node:fs'
-import { delimiter, join } from 'node:path'
+import { existsSync, readdirSync, statSync } from 'node:fs'
+import { delimiter, dirname, join } from 'node:path'
 import { runProcess } from './process-run.ts'
 
 /** One resolved external binary. */
@@ -55,16 +55,29 @@ export function dshCliCandidates(platform: string = process.platform): string[] 
   if (platform === 'darwin' || platform === 'linux') {
     out.push('/usr/local/lib/node_modules/@deepseek-ai/dsh/lib/bin.js')
   }
-  // Version-manager layouts (nvm/fnm/volta) and Windows npm roots.
+  // Version-manager layouts: NVM_DIR/FNM_DIR point at the ROOT of all installed
+  // node versions, so the dsh package lives under the CURRENT version's lib.
+  // Globs are expanded here (not lazily) so every candidate is one concrete
+  // bin.js path — a directory candidate like `$NVM_DIR/versions/node` would
+  // pass an existsSync probe and make `node <dir>` die with MODULE_NOT_FOUND
+  // (the exact "register step fails after pnpm succeeds" bug).
+  const nodeDir = dirname(process.execPath) // …/v22.22.0/bin on nvm machines
+  const versionLib = join(nodeDir, isWin ? '..\\lib\\node_modules' : '../lib/node_modules')
+  out.push(join(versionLib, '@deepseek-ai/dsh/lib/bin.js'))
+  const globVersions = (base: string): string[] => {
+    const versionsDir = join(base, 'versions/node')
+    try {
+      if (!statSync(versionsDir).isDirectory()) return []
+      return readdirSync(versionsDir)
+        .map((version) => join(versionsDir, version, 'lib/node_modules/@deepseek-ai/dsh/lib/bin.js'))
+    } catch {
+      return []
+    }
+  }
   for (const base of [process.env.NVM_DIR, process.env.FNM_DIR, process.env.VOLTA_HOME]) {
     if (base === undefined) continue
-    out.push(join(base, 'versions/node'))
+    out.push(...globVersions(base))
   }
-  // Walk the current node prefix (works for nvm-style and npm -g installs).
-  const nodePrefix = process.execPath
-  const nodeDir = nodePrefix.slice(0, Math.max(nodePrefix.lastIndexOf('/'), nodePrefix.lastIndexOf('\\')))
-  out.push(join(nodeDir, isWin ? 'node_modules/@deepseek-ai/dsh/lib/bin.js' : '../lib/node_modules/@deepseek-ai/dsh/lib/bin.js'))
-  out.push(join(nodeDir, isWin ? 'node_modules/@deepseek-ai/dsh/lib/bin.js' : 'lib/node_modules/@deepseek-ai/dsh/lib/bin.js'))
   // The npm global prefix reported by the environment.
   if (process.env.PREFIX !== undefined) {
     out.push(join(process.env.PREFIX, isWin ? 'node_modules/@deepseek-ai/dsh/lib/bin.js' : 'lib/node_modules/@deepseek-ai/dsh/lib/bin.js'))
@@ -82,7 +95,9 @@ export function dshCliCandidates(platform: string = process.platform): string[] 
 export function resolveDsh(platform: string = process.platform): ResolvedBin | undefined {
   for (const candidate of dshCliCandidates(platform)) {
     try {
-      if (existsSync(candidate)) return { command: process.execPath, argsPrefix: [candidate] }
+      // File check, not bare existsSync: a directory candidate would pass
+      // exists and make `node <dir>` die with MODULE_NOT_FOUND at spawn time.
+      if (statSync(candidate).isFile()) return { command: process.execPath, argsPrefix: [candidate] }
     } catch {
       // skip unreadable candidates
     }
