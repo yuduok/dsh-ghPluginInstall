@@ -1,0 +1,15 @@
+# deps / build output
+node_modules/
+lib/
+
+# third-party reference material (dsh-handbook docs copy)
+references/
+
+# agent-teams runtime state
+.agent-teams/
+
+# local smoke/e2e bundles (generated)
+scripts/.e2e-host.mjs
+
+# editor noise
+.DS_Store
