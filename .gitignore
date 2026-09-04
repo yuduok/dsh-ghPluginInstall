@@ -13,3 +13,4 @@ scripts/.e2e-host.mjs
 
 # editor noise
 .DS_Store
+scripts/.dbg-*.mjs
