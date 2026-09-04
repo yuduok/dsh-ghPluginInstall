@@ -377,20 +377,35 @@ export class GhInstallRuntime extends TypertRemoteService {
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, LIST_TAIL)
       .map((job) => this.wireJob(job))
-    return { jobs, runningId: this.runningId }
+    // An idle lane sends NO runningId key at all: the gateway's JSON-safety
+    // boundary rejects a present-but-undefined value, which would fail every
+    // list() (and disable the install button client-wide).
+    return this.runningId === undefined ? { jobs } : { jobs, runningId: this.runningId }
   }
 
   private wireJob(job: MutableJob): InstallJob {
-    return {
-      id: job.id,
-      url: job.url,
-      label: job.label,
-      phase: job.phase,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
-      logs: [...job.logs],
-      result: job.result,
-    }
+    // Same JSON-safety discipline for optional keys: omit `result` entirely
+    // while the job is running instead of shipping result: undefined.
+    return job.result === undefined
+      ? {
+          id: job.id,
+          url: job.url,
+          label: job.label,
+          phase: job.phase,
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+          logs: [...job.logs],
+        }
+      : {
+          id: job.id,
+          url: job.url,
+          label: job.label,
+          phase: job.phase,
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+          logs: [...job.logs],
+          result: job.result,
+        }
   }
 
   private pruneHistory(): void {
