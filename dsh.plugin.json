@@ -1,0 +1,12 @@
+{
+  "name": "dsh-ghplugininstall",
+  "description": "gh插件安装 — one-click DSH plugin installation from a GitHub zip download",
+  "version": "0.1.0",
+  "entry": {
+    "name": "dsh-ghplugininstall",
+    "inject": []
+  },
+  "client": {
+    "platform": "web"
+  }
+}

@@ -1,0 +1,7 @@
+# Single-package workspace root: isolates this plugin from the accidental
+# pnpm workspace at $HOME (pnpm 11 treats ~/pnpm-workspace.yaml as a root).
+packages:
+  - .
+# pnpm 11 build-script allowlist (pnpm <=10 uses onlyBuiltDependencies).
+allowBuilds:
+  esbuild: true

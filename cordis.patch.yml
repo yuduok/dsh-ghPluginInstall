@@ -1,0 +1,5 @@
+# dsh-ghplugininstall cordis patch — the Loader inserts this plugin into the
+# profile composition.
+- insert:
+    - id: dsh-ghplugininstall
+      name: dsh-ghplugininstall
