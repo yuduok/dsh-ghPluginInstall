@@ -2,16 +2,33 @@
  * Rebuild the smoke/e2e bundles from current src, then run the real-network
  * e2e drive. Bundling ORDER matters: smoke-installer.mjs must be regenerated
  * before .e2e-host.mjs inlines it (the stale-bundle ordering bug bit twice).
+ *
+ * Uses the esbuild Node API (not the CLI shim) so the same script works on
+ * macOS, Linux and Windows.
  */
 import { execFileSync } from 'node:child_process'
+import { build } from 'esbuild'
 
-const es = (args) => execFileSync('node_modules/.bin/esbuild', args, { stdio: 'inherit' })
+const dshExternal = ['@deepseek-ai/*']
 
-es(['src/github-url.ts', '--bundle', '--format=esm', '--platform=node', '--outfile=scripts/smoke-github-url.mjs', '--log-level=error'])
-es(['src/contract.ts', '--bundle', '--format=esm', '--platform=node', '--outfile=scripts/smoke-contract.mjs', '--log-level=error'])
-es(['src/settings.ts', '--bundle', '--format=esm', '--platform=node', '--external:@deepseek-ai/*', '--outfile=scripts/smoke-settings.mjs', '--log-level=error'])
-es(['src/installer.ts', '--bundle', '--format=esm', '--platform=node', '--target=node22', '--external:@deepseek-ai/*', '--outfile=scripts/smoke-installer.mjs', '--log-level=error'])
-es(['src/index.ts', '--bundle', '--format=esm', '--platform=node', '--target=node22', '--external:@deepseek-ai/*', '--outfile=scripts/smoke-index.mjs', '--log-level=error'])
-es(['scripts/e2e-host.mjs', '--bundle', '--format=esm', '--platform=node', '--target=node22', '--external:@deepseek-ai/*', '--outfile=scripts/.e2e-host.mjs', '--log-level=error'])
+const bundle = async (entry, outfile, external = []) => {
+  await build({
+    entryPoints: [entry],
+    outfile,
+    bundle: true,
+    format: 'esm',
+    platform: 'node',
+    target: ['node22'],
+    external,
+    logLevel: 'error',
+  })
+}
 
-execFileSync('node', ['scripts/.e2e-host.mjs'], { stdio: 'inherit' })
+await bundle('src/github-url.ts', 'scripts/smoke-github-url.mjs')
+await bundle('src/contract.ts', 'scripts/smoke-contract.mjs')
+await bundle('src/settings.ts', 'scripts/smoke-settings.mjs', dshExternal)
+await bundle('src/installer.ts', 'scripts/smoke-installer.mjs', dshExternal)
+await bundle('src/index.ts', 'scripts/smoke-index.mjs', dshExternal)
+await bundle('scripts/e2e-host.mjs', 'scripts/.e2e-host.mjs', dshExternal)
+
+execFileSync(process.execPath, ['scripts/.e2e-host.mjs'], { stdio: 'inherit' })

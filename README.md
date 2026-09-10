@@ -108,13 +108,31 @@ dsh plugin --profile web add /path/to/dsh-ghPluginInstall
 
 ## 开发
 
+跨平台（macOS / Linux / Windows）均可，**仓库内不含任何机器相关路径**：
+
 ```bash
-pnpm i                # 安装依赖（devDependencies 以 link: 指向全局 dsh 包）
+pnpm i                # 只装 8 个纯 npm 开发依赖（无 @deepseek-ai，绝不查 registry）
 pnpm run check        # typecheck → vitest（81 断言）→ build（lib/）
 pnpm run smoke:host   # host 半冒烟：mock ctx 起真 runtime，33 项断言
 pnpm run e2e:host     # 真实网络 e2e：驱动完整 host 流水线（脚本先重建捆绑，永不测旧代码）
-node --input-type=module -e "import('<abs>/lib/index.js')"   # 产物可加载性
+pnpm run setup:dev    # 可选：单独重建类型链接
 ```
+
+**关于 `@deepseek-ai/*` 类型包**：dsh 插件的 peer 由宿主运行时在运行期提供，因此它们
+**不是** npm 依赖、也**不允许**从 registry 解析（rc.1 依赖链是断的：`dsh-type-meta`
+等包从未发布）。开发期需要它们只为 `tsc` 生成 client 声明与跑 smoke/e2e，做法是：
+
+- `scripts/dev-links.mjs` 自动定位**全局 dsh 安装**（依次探测运行中 node 的全局树、
+  `npm prefix -g`、`NVM_DIR`/`FNM_DIR`/`VOLTA_HOME` 各版本），把 9 个包链接进
+  `node_modules/@deepseek-ai/`（Windows 用 junction，无需管理员权限）；
+- `build.mjs` 与 `pnpm run typecheck` 都会先跑它（幂等、自愈），找不到全局 dsh 时
+  给出中文指引而不是崩溃；
+- `pnpm-workspace.yaml` 里 `autoInstallPeers: false` 是硬要求，否则 pnpm 会自动去
+  registry 拉 `@deepseek-ai/*@0.0.1-rc.1` 并 404；
+- 构建脚本用 `node <pkg>/bin/<js>` 调 tsc/esbuild，而不是 `node_modules/.bin`（后者在
+  Windows 上是 `.cmd`，`execFileSync` 无法直接执行）。
+
+> 产物可加载性自检：`node --input-type=module -e "import('<abs>/lib/index.js')"`。
 
 > e2e 预期行为：目标仓库 Electricitysheep/dsh-handbook 无 package.json，流水线应在
 > extracting 阶段以中文原因失败并输出 `E2E PASS`——脚本以此验证下载 → 解压 →

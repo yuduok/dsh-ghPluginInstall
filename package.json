@@ -42,11 +42,12 @@
   ],
   "scripts": {
     "build": "node build.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/dev-links.mjs && tsc --noEmit",
     "test": "vitest run",
     "smoke:host": "node scripts/host-smoke.mjs",
-    "check": "pnpm run typecheck && pnpm run test && pnpm run build",
-    "e2e:host": "node scripts/e2e-rebuild-and-run.mjs"
+    "e2e:host": "node scripts/e2e-rebuild-and-run.mjs",
+    "setup:dev": "node scripts/setup-dev.mjs",
+    "check": "pnpm run typecheck && pnpm run test && pnpm run build"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
@@ -103,15 +104,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.4",
-    "@deepseek-ai/cordis": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis",
-    "@deepseek-ai/dsh-typert-protocol": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-typert-protocol",
-    "@deepseek-ai/dsh-typert-registry": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-typert-registry",
-    "@deepseek-ai/dsh-client-runtime": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-runtime",
-    "@deepseek-ai/dsh-client-locale": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-locale",
-    "@deepseek-ai/dsh-client-ui-slots": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-slots",
-    "@deepseek-ai/dsh-client-ui-settings": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-settings",
-    "@deepseek-ai/dsh-settings": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-settings",
-    "@deepseek-ai/schemastery": "link:/Users/yudu/.nvm/versions/node/v22.22.0/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/schemastery"
+    "vitest": "^3.2.4"
   }
 }

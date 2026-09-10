@@ -2,6 +2,11 @@
 # pnpm workspace at $HOME (pnpm 11 treats ~/pnpm-workspace.yaml as a root).
 packages:
   - .
+# dsh plugin peers are provided by the host runtime at run time — they must
+# never be resolved from the npm registry (the rc.1 dependency chain is
+# broken; dsh-handbook ch.3). Without this, pnpm's default autoInstallPeers
+# tries to fetch @deepseek-ai/*@0.0.1-rc.1 and 404s on dsh-type-meta.
+autoInstallPeers: false
 # pnpm 11 build-script allowlist (pnpm <=10 uses onlyBuiltDependencies).
 allowBuilds:
   esbuild: true

@@ -452,8 +452,8 @@ function describeError(error61) {
 }
 
 // src/bin-resolve.ts
-import { existsSync } from "node:fs";
-import { delimiter, join } from "node:path";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { delimiter, dirname, join } from "node:path";
 function pathCandidates(name2, platform) {
   const pathValue = process.env.PATH ?? "";
   const exts = platform === "win32" ? [".cmd", ".exe", ".bat", ""] : [""];
@@ -485,14 +485,22 @@ function dshCliCandidates(platform = process.platform) {
   if (platform === "darwin" || platform === "linux") {
     out.push("/usr/local/lib/node_modules/@deepseek-ai/dsh/lib/bin.js");
   }
+  const nodeDir = dirname(process.execPath);
+  const versionLib = join(nodeDir, isWin ? "..\\lib\\node_modules" : "../lib/node_modules");
+  out.push(join(versionLib, "@deepseek-ai/dsh/lib/bin.js"));
+  const globVersions = (base) => {
+    const versionsDir = join(base, "versions/node");
+    try {
+      if (!statSync(versionsDir).isDirectory()) return [];
+      return readdirSync(versionsDir).map((version2) => join(versionsDir, version2, "lib/node_modules/@deepseek-ai/dsh/lib/bin.js"));
+    } catch {
+      return [];
+    }
+  };
   for (const base of [process.env.NVM_DIR, process.env.FNM_DIR, process.env.VOLTA_HOME]) {
     if (base === void 0) continue;
-    out.push(join(base, "versions/node"));
+    out.push(...globVersions(base));
   }
-  const nodePrefix = process.execPath;
-  const nodeDir = nodePrefix.slice(0, Math.max(nodePrefix.lastIndexOf("/"), nodePrefix.lastIndexOf("\\")));
-  out.push(join(nodeDir, isWin ? "node_modules/@deepseek-ai/dsh/lib/bin.js" : "../lib/node_modules/@deepseek-ai/dsh/lib/bin.js"));
-  out.push(join(nodeDir, isWin ? "node_modules/@deepseek-ai/dsh/lib/bin.js" : "lib/node_modules/@deepseek-ai/dsh/lib/bin.js"));
   if (process.env.PREFIX !== void 0) {
     out.push(join(process.env.PREFIX, isWin ? "node_modules/@deepseek-ai/dsh/lib/bin.js" : "lib/node_modules/@deepseek-ai/dsh/lib/bin.js"));
   }
@@ -501,7 +509,7 @@ function dshCliCandidates(platform = process.platform) {
 function resolveDsh(platform = process.platform) {
   for (const candidate of dshCliCandidates(platform)) {
     try {
-      if (existsSync(candidate)) return { command: process.execPath, argsPrefix: [candidate] };
+      if (statSync(candidate).isFile()) return { command: process.execPath, argsPrefix: [candidate] };
     } catch {
     }
   }
@@ -826,10 +834,18 @@ var GhInstallRuntime = class extends (_a = TypertRemoteService, _start_dec = [Re
   /* ---------------- internals ---------------- */
   snapshot() {
     const jobs = [...this.jobs.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, LIST_TAIL).map((job) => this.wireJob(job));
-    return { jobs, runningId: this.runningId };
+    return this.runningId === void 0 ? { jobs } : { jobs, runningId: this.runningId };
   }
   wireJob(job) {
-    return {
+    return job.result === void 0 ? {
+      id: job.id,
+      url: job.url,
+      label: job.label,
+      phase: job.phase,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      logs: [...job.logs]
+    } : {
       id: job.id,
       url: job.url,
       label: job.label,
